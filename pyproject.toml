@@ -1,0 +1,36 @@
+[project]
+name = "oidfed-collector"
+version = "0.1.0"
+description = "Entity collection endpoint for OpenID Federation"
+authors = [
+    {name = "Diana Gudu",email = "diana.gudu@kit.edu"}
+]
+readme = "README.md"
+requires-python = ">=3.10,<4.0"
+dependencies = [
+    "fastapi (>=0.115.12,<0.116.0)",
+    "uvicorn (>=0.34.2,<0.35.0)",
+    "idpyoidc (>=5.0.0,<6.0.0)",
+    "aiohttp (>=3.11.18,<4.0.0)",
+    "cachetools (>=6.1.0,<7.0.0)",
+]
+
+[tool.poetry]
+packages = [{include = "oidfed_collector", from = "src"}]
+
+[tool.poetry.scripts]
+collector = "oidfed_collector.__main__:main"
+
+[tool.poetry.group.dev.dependencies]
+pyright = "^1.1.400"
+pylint = "^3.3.7"
+pytest = "^8.3.5"
+
+[tool.pyright]
+venvPath = "."
+venv = ".venv"
+pythonVersion = "3.10"
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
