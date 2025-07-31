@@ -19,7 +19,7 @@ dependencies = [
 packages = [{include = "oidfed_collector", from = "src"}]
 
 [tool.poetry.scripts]
-collector = "oidfed_collector.__main__:main"
+oidfed-collector = "oidfed_collector.__main__:main"
 
 [tool.poetry.group.dev.dependencies]
 pyright = "^1.1.400"
