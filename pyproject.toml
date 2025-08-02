@@ -1,6 +1,6 @@
 [project]
 name = "oidfed-collector"
-version = "0.1.0"
+version = "0.2.0"
 description = "Entity collection endpoint for OpenID Federation"
 authors = [
     {name = "Diana Gudu",email = "diana.gudu@kit.edu"}
