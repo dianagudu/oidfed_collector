@@ -59,7 +59,7 @@ python -m oidfed_collector
 ### Using Docker
 
 ```bash
-docker run -d -p 12345:12345 -v $(pwd)/config.json:/app/config.json ddgu/oidfed-collector:latest
+docker run -d -p 12345:12345 -v $(pwd)/config.json:/config.json ddgu/oidfed-collector:latest
 ```
 
 We also provide a `docker-compose.yaml` file for easier deployment, which mounts the configuration file from the current directory. Modify to your needs and use it as follows:
