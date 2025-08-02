@@ -101,3 +101,10 @@ This project is licensed under the MIT License.
 
 This project includes code from fedservice (https://github.com/SUNET/fedservice), licensed under the Apache License, Version 2.0.
 Modifications were made to adapt it for this project.
+
+----
+
+This work was started in and supported by the
+[Geant Trust & Identity Incubator](https://connect.geant.org/trust-and-identity-incubator).
+
+<img src="https://wiki.geant.org/download/attachments/120500419/incubator_logo.jpg" alt="Trust & Identity Incubator logo" height="75"/>
