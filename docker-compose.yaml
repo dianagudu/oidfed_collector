@@ -1,0 +1,11 @@
+
+services:
+  oidc-fed-collector:
+    image: ddgu/oidfed-collector:latest
+    ports:
+      - "12345:12345"
+    environment:
+      - CONFIG=/config.json
+    volumes:
+      - ./config.json:/config.json
+    restart: unless-stopped
