@@ -1,0 +1,14 @@
+{
+    "port": 12345,
+    "log_level": "info",
+    "api_base_url": "/collection",
+    "cache": {
+        "ttl": 300,
+        "max_size": 1000,
+        "cleanup_interval": 60
+    },
+    "session": {
+        "max_concurrent_requests": 100,
+        "ttl": 30
+    }
+}
