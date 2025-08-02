@@ -1,4 +1,4 @@
-__name__ = "openid_collection"
+__name__ = "oidfed_collector"
 
 from fastapi import FastAPI
 from fastapi.exceptions import RequestValidationError, ResponseValidationError
@@ -29,7 +29,7 @@ def create_app():
 
     app.add_exception_handler(RequestValidationError, request_validation_exception_handler)
     app.add_exception_handler(ResponseValidationError, validation_exception_handler)
-    app.include_router(api_router, prefix=CONFIG.API_PREFIX, tags=["Entity Collection"])
+    app.include_router(api_router, prefix=CONFIG.api_base_url, tags=["Entity Collection"])
 
     return app
 

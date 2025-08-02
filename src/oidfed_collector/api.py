@@ -22,8 +22,8 @@ logger.setLevel(logging.DEBUG)
 )
 async def collection(request: Annotated[EntityCollectionRequest, Query()]) -> EntityCollectionResponse:
     session_mgr = SessionManager(
-        ttl_seconds=CONFIG.SESSION_TTL,
-        max_connections=CONFIG.SESSION_MAX_CONCURRENT_REQUESTS
+        ttl_seconds=CONFIG.session.ttl,
+        max_connections=CONFIG.session.max_concurrent_requests
     )
     entities = await collect_entities(request, session_mgr)
     await session_mgr.close()

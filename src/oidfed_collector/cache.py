@@ -130,6 +130,6 @@ def async_cache(ttl: Optional[float] = None,
 
 
 my_cache = AsyncTTLCacheWithEviction(
-    maxsize=CONFIG.CACHE_MAX_SIZE,
-    cleanup_interval=CONFIG.CACHE_CLEANUP_INTERVAL
+    maxsize=CONFIG.cache.max_size,
+    cleanup_interval=CONFIG.cache.cleanup_interval
 )
