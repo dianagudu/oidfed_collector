@@ -29,10 +29,12 @@ logger.setLevel(logging.DEBUG)
     response_model_exclude_none=True,
     response_model_exclude_unset=True,
 )
-async def collection(request: Annotated[EntityCollectionRequest, Query()]) -> EntityCollectionResponse:
+async def collection(
+    request: Annotated[EntityCollectionRequest, Query()],
+) -> EntityCollectionResponse:
     session_mgr = SessionManager(
         ttl_seconds=CONFIG.session.ttl,
-        max_connections=CONFIG.session.max_concurrent_requests
+        max_connections=CONFIG.session.max_concurrent_requests,
     )
     entities = await collect_entities(request, session_mgr)
     await session_mgr.close()

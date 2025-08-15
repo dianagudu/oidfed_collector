@@ -20,7 +20,9 @@ class CacheConfig(BaseModel):
 
 
 class SessionConfig(BaseModel):
-    max_concurrent_requests: int = Field(100, description="Maximum concurrent requests allowed in a session")
+    max_concurrent_requests: int = Field(
+        100, description="Maximum concurrent requests allowed in a session"
+    )
     ttl: int = Field(300, description="Session TTL in seconds")
 
 
@@ -28,8 +30,13 @@ class AppConfig(BaseModel):
     port: int = Field(12345, description="Port on which the app runs")
     log_level: str = Field("info", description="Logging level for the application")
     api_base_url: str = Field("/collection", description="Base URL for the API")
-    cache: CacheConfig = Field(..., description="Configuration for the cache system",)
-    session: SessionConfig = Field(..., description="Configuration for the session management")
+    cache: CacheConfig = Field(
+        ...,
+        description="Configuration for the cache system",
+    )
+    session: SessionConfig = Field(
+        ..., description="Configuration for the session management"
+    )
 
 
 def load_config(path: str | Path) -> AppConfig:

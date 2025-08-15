@@ -10,6 +10,7 @@
 from . import app
 from .config import CONFIG
 
+
 def main():
     """Run the app."""
     import uvicorn

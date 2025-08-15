@@ -10,6 +10,7 @@
 from aiohttp import ClientSession, TCPConnector
 from datetime import datetime, timedelta
 
+
 class SessionManager:
     def __init__(self, *, ttl_seconds=600, max_connections=100):
         self.ttl = timedelta(seconds=ttl_seconds)
@@ -21,9 +22,9 @@ class SessionManager:
         now = datetime.now()
         # If session is missing, closed, or expired, recreate it
         if (
-            self._session is None or
-            self._session.closed or
-            (self._created_at and now - self._created_at > self.ttl)
+            self._session is None
+            or self._session.closed
+            or (self._created_at and now - self._created_at > self.ttl)
         ):
             await self.close()  # Close old session if needed
             self._session = ClientSession(connector=self._connector)

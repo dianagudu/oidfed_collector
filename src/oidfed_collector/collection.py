@@ -75,12 +75,14 @@ class EntityFilter:
     
     def apply(self, entities: list[EntityStatementPlus]) -> list[Entity]:
         """Applies the filters to the list of entities.
-        
+
         :param entities: The list of entities to filter.
         :type entities: list[EntityStatementPlus]
         :return: A list of filtered entities.
         """
-        return [entity.to_entity() for entity in entities if self._filter(entity)]
+        # remove None entries from list
+        filtered_entities = [self._filter(entity) for entity in entities]
+        return [e for e in filtered_entities if e is not None]
 
 
 class FedTree:
@@ -91,7 +93,7 @@ class FedTree:
 
     def flatten(self) -> list[EntityStatementPlus]:
         """Returns a list of entities contained in the FedTree.
-        
+
         :return: A list of entity statement objects.
         :rtype: list[EntityStatementPlus]
         """
@@ -104,7 +106,7 @@ class FedTree:
 @async_cache(ttl=60, key_func=lambda root, *args, **kwargs: root)
 async def traverse(root: str, visited: list[str], session_mgr: SessionManager) -> Tuple[Optional[FedTree], int]:
     """Traverses the federation tree starting from the given root entity ID.
-    
+
     :param root: The entity ID of the root entity.
     :type root: str
     :param visited: A list of already visited entity IDs to avoid cycles.
@@ -116,19 +118,21 @@ async def traverse(root: str, visited: list[str], session_mgr: SessionManager) -
     """
     try:
         logger.debug(f"Traversing entity: {root}")
-        
+
         ta = await get_entity_configuration(entity_id=root, session_mgr=session_mgr)
         subs_ids = await get_list_subordinate_ids(ta, session_mgr=session_mgr)
 
         tree = FedTree(entity=ta)
-        
+
         tasks = []
         for sub_id in subs_ids:
             if sub_id in visited:
                 logger.debug(f"Already visited {sub_id}, skipping to avoid cycles.")
                 continue
             visited.append(sub_id)
-            tasks.append(traverse(root=sub_id, visited=visited, session_mgr=session_mgr))
+            tasks.append(
+                traverse(root=sub_id, visited=visited, session_mgr=session_mgr)
+            )
 
         if tasks:
             results = await asyncio.gather(*tasks)
@@ -140,7 +144,9 @@ async def traverse(root: str, visited: list[str], session_mgr: SessionManager) -
         return None, int(time.time())
 
 
-async def collect_entities(request: EntityCollectionRequest, session_mgr: SessionManager) -> EntityCollectionResponse:
+async def collect_entities(
+    request: EntityCollectionRequest, session_mgr: SessionManager
+) -> EntityCollectionResponse:
     """Collects entities based on the provided request and session manager.
     :param request: The request containing filters and parameters for entity collection.
     :type request: EntityCollectionRequest
@@ -157,11 +163,9 @@ async def collect_entities(request: EntityCollectionRequest, session_mgr: Sessio
 
     entities = tree.flatten()
 
-
     filters = EntityFilter(request)
     filtered_entities = filters.apply(entities)
 
     return EntityCollectionResponse(
-        entities=filtered_entities,
-        last_updated=last_updated
+        entities=filtered_entities, last_updated=last_updated
     )

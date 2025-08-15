@@ -24,13 +24,13 @@ logger = logging.getLogger(__name__)
 
 
 EntityType = Literal[
-        "openid_provider",
-        "openid_relying_party",
-        "oauth_authorization_server",
-        "oauth_client",
-        "oauth_resource",
-        "federation_entity"
-    ]
+    "openid_provider",
+    "openid_relying_party",
+    "oauth_authorization_server",
+    "oauth_client",
+    "oauth_resource",
+    "federation_entity",
+]
 
 
 class EntityCollectionRequest(BaseModel):
@@ -155,12 +155,17 @@ def get_payload(jws_str: str) -> dict:
 
 class EntityStatementPlus(EntityStatement):
     """Entity statement with additional properties."""
+
     def __init__(self, jwt: str):
         payload = get_payload(jwt)
         super().__init__(**payload)
         self._jwt = jwt
         self._request_timestamp = int(time.time())
-        self._ttl = payload.get("exp", 0) - self._request_timestamp if "exp" in payload else None
+        self._ttl = (
+            payload.get("exp", 0) - self._request_timestamp
+            if "exp" in payload
+            else None
+        )
 
     @property
     def request_timestamp(self) -> int:

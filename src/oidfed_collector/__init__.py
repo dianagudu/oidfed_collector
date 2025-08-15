@@ -15,9 +15,13 @@ from contextlib import asynccontextmanager
 
 from ._version import __version__
 from .config import CONFIG
-from .exceptions import request_validation_exception_handler, validation_exception_handler
+from .exceptions import (
+    request_validation_exception_handler,
+    validation_exception_handler,
+)
 from .api import router as api_router
 from .cache import my_cache
+
 
 def create_app():
     """Create the FastAPI app."""
@@ -36,11 +40,15 @@ def create_app():
         lifespan=lifespan,
     )
 
-    app.add_exception_handler(RequestValidationError, request_validation_exception_handler)
+    app.add_exception_handler(
+        RequestValidationError, request_validation_exception_handler
+    )
     app.add_exception_handler(ResponseValidationError, validation_exception_handler)
-    app.include_router(api_router, prefix=CONFIG.api_base_url, tags=["Entity Collection"])
+    app.include_router(
+        api_router, prefix=CONFIG.api_base_url, tags=["Entity Collection"]
+    )
 
     return app
 
-app = create_app()
 
+app = create_app()

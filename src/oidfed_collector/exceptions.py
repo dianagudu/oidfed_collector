@@ -78,7 +78,9 @@ class InternalException(Exception):
         super().__init__(message)
 
 
-async def request_validation_exception_handler(request: Request, exc: Exception) -> JSONResponse:
+async def request_validation_exception_handler(
+    request: Request, exc: Exception
+) -> JSONResponse:
     """Replacement callback for handling RequestValidationError exceptions.
 
     :param request: request object that caused the RequestValidationError
@@ -91,9 +93,7 @@ async def request_validation_exception_handler(request: Request, exc: Exception)
     return BadRequest(exc.__str__())
 
 
-async def validation_exception_handler(
-    request: Request, exc: Exception
-):
+async def validation_exception_handler(request: Request, exc: Exception):
     """Replacement callback for handling ResponseValidationError exceptions.
 
     :param request: request object that caused the ResponseValidationError
@@ -101,7 +101,10 @@ async def validation_exception_handler(
     """
     _ = request
     _ = exc
-    return InvalidResponse(exc) if isinstance(exc, (ResponseValidationError, ValidationError)) else JSONResponse(
-        status_code=HTTP_500_INTERNAL_SERVER_ERROR,
-        content={"detail": str(exc)}
+    return (
+        InvalidResponse(exc)
+        if isinstance(exc, (ResponseValidationError, ValidationError))
+        else JSONResponse(
+            status_code=HTTP_500_INTERNAL_SERVER_ERROR, content={"detail": str(exc)}
+        )
     )
