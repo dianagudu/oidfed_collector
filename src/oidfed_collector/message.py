@@ -1,3 +1,4 @@
+# type: ignore
 """Classes and functions used to describe information in an OpenID Connect Federation."""
 
 __author__ = "Roland Hedberg"
