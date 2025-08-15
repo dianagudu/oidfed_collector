@@ -18,7 +18,6 @@ from .config import CONFIG
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
 
 
 @router.get(

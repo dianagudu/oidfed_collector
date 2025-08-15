@@ -514,7 +514,9 @@ class TrustMarks(Message):
         for _id, spec in self.items():
             _trust_mark = spec.get("trust_mark")
             if _trust_mark:
-                _trust_mark_type = spec.get("trust_mark_type") or spec.get("trust_mark_id")
+                _trust_mark_type = spec.get("trust_mark_type") or spec.get(
+                    "trust_mark_id"
+                )
                 if _trust_mark_type:
                     # Have to peek into the trust mark
                     _jws = factory(_trust_mark)
@@ -711,7 +713,9 @@ class TrustMark(JsonWebToken):
             _delegation.verify()
             if self.get("iss") != _delegation["sub"]:
                 raise ValueError("Not the issuer the delegation applies to")
-            if self.get("trust_mark_type", self.get("trust_mark_id")) != _delegation.get("trust_mark_type", _delegation.get("id")):
+            if self.get(
+                "trust_mark_type", self.get("trust_mark_id")
+            ) != _delegation.get("trust_mark_type", _delegation.get("id")):
                 raise ValueError("Not the trust mark id the delegation applies to")
             self["__delegation"] = _delegation
 

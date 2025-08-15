@@ -38,6 +38,8 @@ class EntityFilter:
         self.entity_claims = request.entity_claims
         self.ui_claims = request.ui_claims
 
+        logger.debug("Applying filters: %s", request)
+
     def _filter(self, entity: EntityStatementPlus) -> Entity | None:
         """Filters the entity based on the provided filters and returns the entity
         in the format specified by the Entity model.
@@ -61,9 +63,9 @@ class EntityFilter:
                 )
                 return None
 
-        tms = entity.get("trust_marks")
-        # this is a list of dicts, each containing trust_mark_type (str) and trust_mark (JWT)
-
+        tms = entity.get(
+            "trust_marks"
+        )  # array of json objects with trust_mark_type and trust_mark
         if self.trust_mark_type:
             if not tms:
                 logger.debug(
@@ -72,17 +74,25 @@ class EntityFilter:
                 return None
 
             # check if the entity contains all requested trust mark types
-            trust_marks = [
-                tm.get("trust_mark_type") or tm.get("trust_mark_id") for tm in tms
-            ]
-            if not all(tm in trust_marks for tm in self.trust_mark_type):
+            if not all(
+                tm in (t.get("trust_mark_type", t.get("trust_mark_id")) for t in tms)
+                for tm in self.trust_mark_type
+            ):
                 logger.debug(
                     f"Entity {entity.get('sub')} does not match trust mark type filter {self.trust_mark_type}, skipping."
                 )
                 return None
-            # todo validate each trust mark
+            # validate each of the required trust marks
+            required_tms = [
+                tm.get("trust_mark")
+                for tm in tms
+                if tm.get("trust_mark_type", tm.get("trust_mark_id"))
+                in self.trust_mark_type
+            ]
             try:
-                if not all(TrustMark(**get_payload(tm["trust_mark"])).verify() for tm in tms):
+                if not all(
+                    TrustMark(**get_payload(tm)).verify() for tm in required_tms
+                ):
                     logger.debug(
                         f"Entity {entity.get('sub')} has invalid trust marks, skipping."
                     )
@@ -96,10 +106,20 @@ class EntityFilter:
         entity_dict = {}
         entity_dict["entity_id"] = entity.get("sub")
         entity_dict["entity_types"] = entity.get_entity_types()
-        entity_dict["trust_marks"] = [{
-            "trust_mark_type": tm.get("trust_mark_type") or tm.get("trust_mark_id"),
-            "trust_mark": tm.get("trust_mark"),
-        } for tm in tms] if tms else None
+        entity_dict["trust_marks"] = (
+            [
+                {
+                    "trust_mark_type": tm.get(
+                        "trust_mark_type", tm.get("trust_mark_id")
+                    ),
+                    "trust_mark": tm.get("trust_mark"),
+                }
+                for tm in tms
+            ]
+            if tms
+            else None
+        )
+
         entity_dict["ui_infos"] = None
 
         # if entity_types is provided, use it to filter the UI infos
@@ -143,7 +163,8 @@ class EntityFilter:
             **{
                 k: v
                 for k, v in entity_dict.items()
-                if not self.entity_claims or k in self.entity_claims + ["entity_id"]
+                if not self.entity_claims
+                or k in set(self.entity_claims + ["entity_id"])
             }
         )
 
@@ -154,9 +175,11 @@ class EntityFilter:
         :type entities: list[EntityStatementPlus]
         :return: A list of filtered entities.
         """
-        # remove None entries from list
+        logger.debug("Applying filters to %d entities", len(entities))
         filtered_entities = [self._filter(entity) for entity in entities]
-        return [e for e in filtered_entities if e is not None]
+        filtered_entities = [e for e in filtered_entities if e is not None]
+        logger.debug("Filtered entities: %d", len(filtered_entities))
+        return filtered_entities
 
 
 class FedTree:

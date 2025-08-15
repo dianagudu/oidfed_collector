@@ -9,6 +9,9 @@
 
 __name__ = "oidfed_collector"
 
+import logging
+import logging.handlers
+import sys
 from fastapi import FastAPI
 from fastapi.exceptions import RequestValidationError, ResponseValidationError
 from contextlib import asynccontextmanager
@@ -46,6 +49,27 @@ def create_app():
     app.add_exception_handler(ResponseValidationError, validation_exception_handler)
     app.include_router(
         api_router, prefix=CONFIG.api_base_url, tags=["Entity Collection"]
+    )
+
+    # configure logging
+    if CONFIG.log_file is None or CONFIG.log_file == "/dev/stderr":
+        log_handler = logging.StreamHandler()
+    elif CONFIG.log_file == "/dev/stdout":
+        log_handler = logging.StreamHandler(sys.stdout)
+    else:
+        try:
+            log_handler = logging.handlers.RotatingFileHandler(
+                CONFIG.log_file, maxBytes=100**6, backupCount=2
+            )
+        except Exception:  # pylint: disable=broad-except
+            # anything goes wrong, fallback to stderr
+            log_handler = logging.StreamHandler()
+    log_format = "[%(asctime)s] [%(name)s] %(levelname)s - %(message)s"
+    logging.basicConfig(
+        level=CONFIG.log_level.upper(),
+        handlers=[log_handler],
+        format=log_format,
+        datefmt="%Y-%m-%d %H:%M:%S",
     )
 
     return app

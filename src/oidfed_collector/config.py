@@ -29,6 +29,7 @@ class SessionConfig(BaseModel):
 class AppConfig(BaseModel):
     port: int = Field(12345, description="Port on which the app runs")
     log_level: str = Field("info", description="Logging level for the application")
+    log_file: str = Field("/dev/stderr", description="Log file path, by default stderr")
     api_base_url: str = Field("/collection", description="Base URL for the API")
     cache: CacheConfig = Field(
         ...,
