@@ -514,7 +514,7 @@ class TrustMarks(Message):
         for _id, spec in self.items():
             _trust_mark = spec.get("trust_mark")
             if _trust_mark:
-                _trust_mark_type = spec.get("trust_mark_type")
+                _trust_mark_type = spec.get("trust_mark_type") or spec.get("trust_mark_id")
                 if _trust_mark_type:
                     # Have to peek into the trust mark
                     _jws = factory(_trust_mark)
@@ -652,7 +652,9 @@ class TrustMarkDelegation(Message):
     c_param = {
         "iss": SINGLE_REQUIRED_STRING,
         "sub": SINGLE_REQUIRED_STRING,
-        "trust_mark_type": SINGLE_REQUIRED_STRING,
+        # "trust_mark_type": SINGLE_REQUIRED_STRING,
+        "trust_mark_type": SINGLE_OPTIONAL_STRING,  # to support old spec versions
+        "trust_mark_id": SINGLE_OPTIONAL_STRING,  # to support old spec versions
         "iat": SINGLE_REQUIRED_INT,
         "exp": SINGLE_OPTIONAL_INT,
         "ref": SINGLE_OPTIONAL_STRING,
@@ -676,8 +678,9 @@ class TrustMark(JsonWebToken):
             "sub": SINGLE_REQUIRED_STRING,
             "iss": SINGLE_REQUIRED_STRING,
             "iat": SINGLE_REQUIRED_INT,
-            "trust_mark_type": SINGLE_REQUIRED_STRING,
+            # "trust_mark_type": SINGLE_REQUIRED_STRING,
             "trust_mark_type": SINGLE_OPTIONAL_STRING,  # to support old spec versions
+            "trust_mark_id": SINGLE_OPTIONAL_STRING,  # to support old spec versions
             "logo_uri": SINGLE_OPTIONAL_STRING,
             "exp": SINGLE_OPTIONAL_INT,
             "ref": SINGLE_OPTIONAL_STRING,
@@ -708,7 +711,7 @@ class TrustMark(JsonWebToken):
             _delegation.verify()
             if self.get("iss") != _delegation["sub"]:
                 raise ValueError("Not the issuer the delegation applies to")
-            if self.get("trust_mark_type") != _delegation["trust_mark_type"]:
+            if self.get("trust_mark_type", self.get("trust_mark_id")) != _delegation.get("trust_mark_type", _delegation.get("id")):
                 raise ValueError("Not the trust mark id the delegation applies to")
             self["__delegation"] = _delegation
 

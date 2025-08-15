@@ -49,21 +49,21 @@ class EntityCollectionRequest(BaseModel):
 class UiInfo(BaseModel):
     """UI information for an entity"""
 
-    display_name: str | None
-    description: str | None
-    keywords: list[str] | None
-    logo_uri: HttpUrl | str | None
-    policy_uri: HttpUrl | str | None
-    information_uri: HttpUrl | str | None
+    display_name: str | None = None
+    description: str | None = None
+    keywords: list[str] | None = None
+    logo_uri: HttpUrl | str | None = None
+    policy_uri: HttpUrl | str | None = None
+    information_uri: HttpUrl | str | None = None
 
 
 class Entity(BaseModel):
     """Entity"""
 
     entity_id: str
-    entity_types: list[EntityType]
-    ui_infos: dict[EntityType, UiInfo] | None
-    trust_marks: list[dict[Literal["trust_mark_type", "trust_mark"], str]] | None
+    entity_types: list[EntityType] | None = None
+    ui_infos: dict[EntityType, UiInfo] | None = None
+    trust_marks: list[dict[Literal["trust_mark_type", "trust_mark"], str]] | None = None
 
 
 class EntityCollectionResponse(BaseModel):

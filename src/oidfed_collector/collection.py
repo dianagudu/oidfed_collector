@@ -13,6 +13,7 @@ from typing import Optional, Tuple, List
 import asyncio
 
 from oidfed_collector.config import CONFIG
+from oidfed_collector.message import TrustMark
 
 from .models import (
     Entity,
@@ -20,6 +21,7 @@ from .models import (
     EntityCollectionRequest,
     EntityCollectionResponse,
     UiInfo,
+    get_payload,
 )
 from .utils import get_entity_configuration, get_list_subordinate_ids
 from .session_manager import SessionManager
@@ -79,6 +81,17 @@ class EntityFilter:
                 )
                 return None
             # todo validate each trust mark
+            try:
+                if not all(TrustMark(**get_payload(tm["trust_mark"])).verify() for tm in tms):
+                    logger.debug(
+                        f"Entity {entity.get('sub')} has invalid trust marks, skipping."
+                    )
+                    return None
+            except ValueError as e:
+                logger.debug(
+                    f"Entity {entity.get('sub')} has invalid trust marks: {e}, skipping."
+                )
+                return None
 
         entity_dict = {}
         entity_dict["entity_id"] = entity.get("sub")
@@ -130,7 +143,7 @@ class EntityFilter:
             **{
                 k: v
                 for k, v in entity_dict.items()
-                if not self.entity_claims or k in self.entity_claims
+                if not self.entity_claims or k in self.entity_claims + ["entity_id"]
             }
         )
 
