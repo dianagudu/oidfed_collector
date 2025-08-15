@@ -42,7 +42,8 @@ class EntityCollectionRequest(BaseModel):
     trust_mark_type: list[str] | None = None
     trust_anchor: HttpUrl
     query: str | None = None
-    claims: list[str] | None = None
+    entity_claims: list[str] | None = None
+    ui_claims: list[str] | None = None
 
 
 class UiInfo(BaseModel):
@@ -62,7 +63,7 @@ class Entity(BaseModel):
     entity_id: str
     entity_types: list[EntityType]
     ui_infos: dict[EntityType, UiInfo] | None
-    trust_marks: list[str] | None
+    trust_marks: list[dict[Literal["trust_mark_type", "trust_mark"], str]] | None
 
 
 class EntityCollectionResponse(BaseModel):
@@ -203,41 +204,3 @@ class EntityStatementPlus(EntityStatement):
             if "federation_entity" in etypes:
                 return [t for t in etypes if t != "federation_entity"][0]
         return etypes[0]
-
-    def to_entity(self) -> Entity:
-        """Converts the entity statement to an entity object.
-        :return: The entity object.
-        """
-        entity_dict = {}
-        entity_dict["entity_id"] = self.get("sub")
-        entity_dict["entity_types"] = self.get_entity_types()
-        
-        entity_dict["trust_marks"] = None
-        tms = self.get("trust_marks")
-        if tms:
-            entity_dict["trust_marks"] = []
-            for tm in tms:
-                entity_dict["trust_marks"].append(tm.get("trust_mark"))
-        
-        entity_dict["ui_infos"] = None
-        for etype in entity_dict["entity_types"]:
-            md = self.get("metadata").get(etype) if self.get("metadata") else None  # pyright: ignore
-            if md:
-                if entity_dict["ui_infos"] is None:
-                    entity_dict["ui_infos"] = {}
-                display_name = md.get("display_name", None)
-                if not display_name:
-                    if etype == "openid_relying_party" or etype == "oauth_client":
-                        display_name = md.get("client_name", None)
-                    elif etype == "oauth_resource":
-                        display_name = md.get("resource_name", None)
-                entity_dict["ui_infos"][etype] = UiInfo(
-                    display_name=display_name,
-                    description=md.get("description", None),
-                    keywords=md.get("keywords", None),
-                    logo_uri=md.get("logo_uri", None),
-                    policy_uri=md.get("policy_uri", None),
-                    information_uri=md.get("information_uri", None),
-                )
-
-        return Entity(**entity_dict)

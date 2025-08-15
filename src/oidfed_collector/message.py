@@ -677,7 +677,7 @@ class TrustMark(JsonWebToken):
             "iss": SINGLE_REQUIRED_STRING,
             "iat": SINGLE_REQUIRED_INT,
             "trust_mark_type": SINGLE_REQUIRED_STRING,
-            "trust_mark_type": SINGLE_OPTIONAL_STRING,    # to support old spec versions
+            "trust_mark_type": SINGLE_OPTIONAL_STRING,  # to support old spec versions
             "logo_uri": SINGLE_OPTIONAL_STRING,
             "exp": SINGLE_OPTIONAL_INT,
             "ref": SINGLE_OPTIONAL_STRING,

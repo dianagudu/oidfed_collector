@@ -12,11 +12,14 @@ import time
 from typing import Optional, Tuple, List
 import asyncio
 
+from oidfed_collector.config import CONFIG
+
 from .models import (
     Entity,
     EntityStatementPlus,
     EntityCollectionRequest,
     EntityCollectionResponse,
+    UiInfo,
 )
 from .utils import get_entity_configuration, get_list_subordinate_ids
 from .session_manager import SessionManager
@@ -30,49 +33,107 @@ class EntityFilter:
     def __init__(self, request: EntityCollectionRequest) -> None:
         self.entity_type = request.entity_type
         self.trust_mark_type = request.trust_mark_type
-    
-    def _filter(self, entity: EntityStatementPlus) -> bool:
-        """Filters the entity based on the provided filters.
-        
+        self.entity_claims = request.entity_claims
+        self.ui_claims = request.ui_claims
+
+    def _filter(self, entity: EntityStatementPlus) -> Entity | None:
+        """Filters the entity based on the provided filters and returns the entity
+        in the format specified by the Entity model.
+        The entity must match all filters and will return None if it does not match.
+        The filter also filters out specific claims, if provided in the request.
+
         :param entity: The entity to filter.
         :type entity: EntityStatementPlus
-        :return: True if the entity matches the filters, False otherwise.
+        :return: The filtered entity if it matches the filters, None otherwise.
         """
-        if self.entity_type:
-            md = entity.get("metadata")
-            if not md:
-                logger.debug("No metadata found in entity statement, skipping entity.")
-                return False
-            else:
-                if not any(
-                    et in md.keys() for et in self.entity_type
-                ):
-                    logger.debug(
-                        f"Entity {entity.get('sub')} does not match entity type filter {self.entity_type}, skipping."
-                    )
-                    return False
-                
-    
-        if self.trust_mark_type:
-            tms = entity.get("trust_marks")
-            logger.debug("Trust marks: %s", tms)
-            if not tms:
-                logger.debug("No trust marks found in entity statement, skipping entity.")
-                return False
-            else:
-                trust_marks = [tm.get("trust_mark_type") or tm.get("trust_mark_id") for tm in tms]
-                # todo validate each trust mark
-                if not any(
-                    tm in trust_marks
-                    for tm in self.trust_mark_type
-                ):
-                    logger.debug(
-                        f"Entity {entity.get('sub')} does not match trust mark type filter {self.trust_mark_type}, skipping."
-                    )
-                    return False
+        md = entity.get("metadata")
+        if not md:
+            logger.debug("No metadata found in entity statement, skipping entity.")
+            return None
 
-        return True
-    
+        if self.entity_type:
+            # check if any of the entity types in the metadata match the requested entity types
+            if not any(et in md.keys() for et in self.entity_type):
+                logger.debug(
+                    f"Entity {entity.get('sub')} does not match entity type filter {self.entity_type}, skipping."
+                )
+                return None
+
+        tms = entity.get("trust_marks")
+        # this is a list of dicts, each containing trust_mark_type (str) and trust_mark (JWT)
+
+        if self.trust_mark_type:
+            if not tms:
+                logger.debug(
+                    "No trust marks found in entity statement, skipping entity."
+                )
+                return None
+
+            # check if the entity contains all requested trust mark types
+            trust_marks = [
+                tm.get("trust_mark_type") or tm.get("trust_mark_id") for tm in tms
+            ]
+            if not all(tm in trust_marks for tm in self.trust_mark_type):
+                logger.debug(
+                    f"Entity {entity.get('sub')} does not match trust mark type filter {self.trust_mark_type}, skipping."
+                )
+                return None
+            # todo validate each trust mark
+
+        entity_dict = {}
+        entity_dict["entity_id"] = entity.get("sub")
+        entity_dict["entity_types"] = entity.get_entity_types()
+        entity_dict["trust_marks"] = [{
+            "trust_mark_type": tm.get("trust_mark_type") or tm.get("trust_mark_id"),
+            "trust_mark": tm.get("trust_mark"),
+        } for tm in tms] if tms else None
+        entity_dict["ui_infos"] = None
+
+        # if entity_types is provided, use it to filter the UI infos
+        # otherwise, use all entity types in the metadata
+        for etype in (
+            set(self.entity_type + ["federation_entity"])
+            if self.entity_type
+            else entity_dict["entity_types"]
+        ):
+            md_type = md.get(etype)
+            if md_type:
+                if entity_dict["ui_infos"] is None:
+                    entity_dict["ui_infos"] = {}
+
+                display_name = md_type.get("display_name", None)
+                if not display_name:
+                    if etype == "openid_relying_party" or etype == "oauth_client":
+                        display_name = md_type.get("client_name", None)
+                    elif etype == "oauth_resource":
+                        display_name = md_type.get("resource_name", None)
+
+                ui_info_dict = {}
+                ui_info_dict["display_name"] = display_name
+                ui_info_dict["description"] = md_type.get("description", None)
+                ui_info_dict["keywords"] = md_type.get("keywords", None)
+                ui_info_dict["logo_uri"] = md_type.get("logo_uri", None)
+                ui_info_dict["policy_uri"] = md_type.get("policy_uri", None)
+                ui_info_dict["information_uri"] = md_type.get("information_uri", None)
+
+                # filter UI infos by ui_claims, if provided
+                entity_dict["ui_infos"][etype] = UiInfo(
+                    **{
+                        k: v
+                        for k, v in ui_info_dict.items()
+                        if not self.ui_claims or k in self.ui_claims
+                    }
+                )
+
+        # filter by entity_claims, if provided
+        return Entity(
+            **{
+                k: v
+                for k, v in entity_dict.items()
+                if not self.entity_claims or k in self.entity_claims
+            }
+        )
+
     def apply(self, entities: list[EntityStatementPlus]) -> list[Entity]:
         """Applies the filters to the list of entities.
 
@@ -103,8 +164,10 @@ class FedTree:
         return entities
 
 
-@async_cache(ttl=60, key_func=lambda root, *args, **kwargs: root)
-async def traverse(root: str, visited: list[str], session_mgr: SessionManager) -> Tuple[Optional[FedTree], int]:
+@async_cache(ttl=CONFIG.cache.ttl, key_func=lambda root, *args, **kwargs: root)
+async def traverse(
+    root: str, visited: list[str], session_mgr: SessionManager
+) -> Tuple[Optional[FedTree], int]:
     """Traverses the federation tree starting from the given root entity ID.
 
     :param root: The entity ID of the root entity.
@@ -155,7 +218,9 @@ async def collect_entities(
     :return: An EntityCollectionResponse containing the collected entities.
     :rtype: EntityCollectionResponse
     """
-    tree, last_updated = await traverse(request.trust_anchor.encoded_string(), visited=[], session_mgr=session_mgr)
+    tree, last_updated = await traverse(
+        str(request.trust_anchor), visited=[], session_mgr=session_mgr
+    )
 
     if not tree:
         logger.warning("No entities found in the federation tree.")
