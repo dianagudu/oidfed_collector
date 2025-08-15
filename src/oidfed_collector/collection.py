@@ -9,7 +9,7 @@
 
 import logging
 import time
-from typing import Optional, Tuple, List
+from typing import Optional, Tuple
 import asyncio
 
 from oidfed_collector.config import CONFIG
@@ -22,6 +22,7 @@ from .models import (
     EntityCollectionResponse,
     UiInfo,
     get_payload,
+    URL,
 )
 from .utils import get_entity_configuration, get_list_subordinate_ids
 from .session_manager import SessionManager
@@ -254,8 +255,9 @@ async def collect_entities(
     :return: An EntityCollectionResponse containing the collected entities.
     :rtype: EntityCollectionResponse
     """
+    trust_anchor = URL(request.trust_anchor).remove_trailing_slashes()
     tree, last_updated = await traverse(
-        str(request.trust_anchor), visited=[], session_mgr=session_mgr
+        str(trust_anchor), visited=[str(trust_anchor)], session_mgr=session_mgr
     )
 
     if not tree:

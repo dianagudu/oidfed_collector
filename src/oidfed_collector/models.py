@@ -32,6 +32,22 @@ EntityType = Literal[
     "federation_entity",
 ]
 
+EntityClaims = Literal[
+    "entity_id",
+    "entity_types",
+    "trust_marks",
+    "ui_infos",
+]
+
+UiClaims = Literal[
+    "display_name",
+    "description",
+    "keywords",
+    "logo_uri",
+    "policy_uri",
+    "information_uri",
+]
+
 
 class EntityCollectionRequest(BaseModel):
     """Request for entity collection"""
@@ -42,8 +58,8 @@ class EntityCollectionRequest(BaseModel):
     trust_mark_type: list[str] | None = None
     trust_anchor: HttpUrl
     query: str | None = None
-    entity_claims: list[str] | None = None
-    ui_claims: list[str] | None = None
+    entity_claims: list[EntityClaims] | None = None
+    ui_claims: list[UiClaims] | None = None
 
 
 class UiInfo(BaseModel):
@@ -60,7 +76,7 @@ class UiInfo(BaseModel):
 class Entity(BaseModel):
     """Entity"""
 
-    entity_id: str
+    entity_id: HttpUrl
     entity_types: list[EntityType] | None = None
     ui_infos: dict[EntityType, UiInfo] | None = None
     trust_marks: list[dict[Literal["trust_mark_type", "trust_mark"], str]] | None = None
