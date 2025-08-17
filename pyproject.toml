@@ -20,6 +20,8 @@ version = "0.0.0"
 
 [tool.poetry-dynamic-versioning]
 enable = true
+write_to = "my_package/_version.py"
+enable-runtime = true
 
 [tool.poetry.scripts]
 oidfed-collector = "oidfed_collector.__main__:main"

@@ -10,29 +10,21 @@
 __name__ = "oidfed_collector"
 
 import subprocess
-import sys
+from ._version import __version__ as _version_placeholder
 
-__version__ = "0.0.0+dev"  # fallback
+__version__ = _version_placeholder
 
-# Attempt to read version from git in dev mode
-try:
-    if not hasattr(sys, "frozen"):  # skip for frozen builds
+# Runtime: try to get git tag if still placeholder
+if _version_placeholder.endswith("+dev") or _version_placeholder == "0.0.0":
+    try:
         git_version = subprocess.check_output(
             ["git", "describe", "--tags", "--always"],
             stderr=subprocess.DEVNULL,
         ).decode().strip()
         if git_version:
             __version__ = git_version
-except Exception:
-    pass
-
-# poetry-dynamic-versioning will replace this during build
-try:
-    from ._version import __version__ as _version_build
-    if _version_build and _version_build != "0.0.0":
-        __version__ = _version_build
-except ImportError:
-    pass
+    except Exception:
+        pass
 
 __all__ = ["__version__"]
 
