@@ -17,10 +17,14 @@ __version__ = _version_placeholder
 # Runtime: try to get git tag if still placeholder
 if _version_placeholder.endswith("+dev") or _version_placeholder == "0.0.0":
     try:
-        git_version = subprocess.check_output(
-            ["git", "describe", "--tags", "--always"],
-            stderr=subprocess.DEVNULL,
-        ).decode().strip()
+        git_version = (
+            subprocess.check_output(
+                ["git", "describe", "--tags", "--always"],
+                stderr=subprocess.DEVNULL,
+            )
+            .decode()
+            .strip()
+        )
         if git_version:
             __version__ = git_version
     except Exception:

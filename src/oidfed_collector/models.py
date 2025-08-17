@@ -74,17 +74,18 @@ class UiInfo(BaseModel):
     logo_uri: HttpUrl | str | None = None
     policy_uri: HttpUrl | str | None = None
     information_uri: HttpUrl | str | None = None
+
     # this is to allow language tags in the UI info for all claims
     class Config:
         extra = "allow"
-    
+
     # function that can filter based on language, where additional fields are named field#lang
     # e.g. display_name#en, display_name#fr, etc.
     # by default, when lang is not specified, all language tags are returned
     # when lang is specified, the fields without the language tag is returned,
     # as well as the fields with the requested language tag
     # all other language tagged fields are filtered out
-    def to_dict(self, lang:str | None = None):
+    def to_dict(self, lang: str | None = None):
         data = self.model_dump(exclude_none=True, exclude_unset=True)
         if lang:
             # filter fields with language tag
@@ -95,8 +96,7 @@ class UiInfo(BaseModel):
                     # remove all other language tagged fields
                     data.pop(key, None)
         return data
-                    
-    
+
 
 class Entity(BaseModel):
     """Entity"""
