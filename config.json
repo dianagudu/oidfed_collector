@@ -1,6 +1,7 @@
 {
     "port": 12345,
     "log_level": "info",
+    "log_file": "/dev/stderr",
     "api_base_url": "/collection",
     "cache": {
         "ttl": 300,

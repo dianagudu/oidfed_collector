@@ -1,3 +1,12 @@
+# ==============================================================
+#       |
+#   \  ___  /                           _________
+#  _  /   \  _    GÉANT                 |  * *  | Co-Funded by
+#     | ~ |       Trust & Identity      | *   * | the European
+#      \_/        Incubator             |__*_*__| Union
+#       =
+# ==============================================================
+
 import time
 import asyncio
 from cachetools import LRUCache
@@ -11,6 +20,7 @@ from .config import CONFIG
 
 logger = logging.getLogger(__name__)
 
+
 class AsyncTTLCacheWithEviction:
     def __init__(self, maxsize=1024, cleanup_interval=60):
         self._cache = LRUCache(maxsize=maxsize)
@@ -19,7 +29,7 @@ class AsyncTTLCacheWithEviction:
         self._cleanup_task = None
 
     def _normalize_key(self, key):
-        if not hasattr(key, '__hash__'):
+        if not hasattr(key, "__hash__"):
             raise TypeError(f"Unhashable key: {key}")
         return key
 
@@ -65,8 +75,7 @@ class AsyncTTLCacheWithEviction:
     async def size(self):
         async with self._lock:
             return sum(
-                1 for _, exp in self._cache.values()
-                if exp is None or exp > time.time()
+                1 for _, exp in self._cache.values() if exp is None or exp > time.time()
             )
 
     async def start(self):
@@ -79,8 +88,11 @@ class AsyncTTLCacheWithEviction:
                 await asyncio.sleep(self._cleanup_interval)
                 now = time.time()
                 async with self._lock:
-                    keys_to_delete = [k for k, (_, exp) in self._cache.items()
-                                      if exp is not None and exp < now]
+                    keys_to_delete = [
+                        k
+                        for k, (_, exp) in self._cache.items()
+                        if exp is not None and exp < now
+                    ]
                     for k in keys_to_delete:
                         del self._cache[k]
         except asyncio.CancelledError:
@@ -94,10 +106,12 @@ class AsyncTTLCacheWithEviction:
             self._cleanup_task = None
 
 
-def async_cache(ttl: Optional[float] = None,
-                ttl_func: Optional[Callable[..., float]] = None,
-                key_func: Optional[Callable[..., Any]] = None,
-                cache: Optional[AsyncTTLCacheWithEviction] = None):
+def async_cache(
+    ttl: Optional[float] = None,
+    ttl_func: Optional[Callable[..., float]] = None,
+    key_func: Optional[Callable[..., Any]] = None,
+    cache: Optional[AsyncTTLCacheWithEviction] = None,
+):
     """
     Caches async function results with optional per-call TTL based on result.
 
@@ -112,7 +126,11 @@ def async_cache(ttl: Optional[float] = None,
     def decorator(fn):
         @wraps(fn)
         async def wrapper(*args, **kwargs):
-            key = key_func(*args, **kwargs) if key_func else (args, frozenset(kwargs.items()))
+            key = (
+                key_func(*args, **kwargs)
+                if key_func
+                else (args, frozenset(kwargs.items()))
+            )
 
             if await cache.has(key):
                 logger.debug(f"Cache hit for {key}")
@@ -125,11 +143,12 @@ def async_cache(ttl: Optional[float] = None,
             await cache.set(key, result, ttl=ttl_value)
 
             return result
+
         return wrapper
+
     return decorator
 
 
 my_cache = AsyncTTLCacheWithEviction(
-    maxsize=CONFIG.cache.max_size,
-    cleanup_interval=CONFIG.cache.cleanup_interval
+    maxsize=CONFIG.cache.max_size, cleanup_interval=CONFIG.cache.cleanup_interval
 )

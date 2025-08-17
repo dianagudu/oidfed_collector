@@ -1,14 +1,52 @@
+# ==============================================================
+#       |
+#   \  ___  /                           _________
+#  _  /   \  _    GÉANT                 |  * *  | Co-Funded by
+#     | ~ |       Trust & Identity      | *   * | the European
+#      \_/        Incubator             |__*_*__| Union
+#       =
+# ==============================================================
+
 __name__ = "oidfed_collector"
 
+import subprocess
+from ._version import __version__ as _version_placeholder
+
+__version__ = _version_placeholder
+
+# Runtime: try to get git tag if still placeholder
+if _version_placeholder.endswith("+dev") or _version_placeholder == "0.0.0":
+    try:
+        git_version = (
+            subprocess.check_output(
+                ["git", "describe", "--tags", "--always"],
+                stderr=subprocess.DEVNULL,
+            )
+            .decode()
+            .strip()
+        )
+        if git_version:
+            __version__ = git_version
+    except Exception:
+        pass
+
+__all__ = ["__version__"]
+
+import logging
+import logging.handlers
+import sys
 from fastapi import FastAPI
 from fastapi.exceptions import RequestValidationError, ResponseValidationError
 from contextlib import asynccontextmanager
 
-from ._version import __version__
 from .config import CONFIG
-from .exceptions import request_validation_exception_handler, validation_exception_handler
+from .exceptions import (
+    request_validation_exception_handler,
+    response_validation_exception_handler,
+)
 from .api import router as api_router
 from .cache import my_cache
+
 
 def create_app():
     """Create the FastAPI app."""
@@ -27,11 +65,38 @@ def create_app():
         lifespan=lifespan,
     )
 
-    app.add_exception_handler(RequestValidationError, request_validation_exception_handler)
-    app.add_exception_handler(ResponseValidationError, validation_exception_handler)
-    app.include_router(api_router, prefix=CONFIG.api_base_url, tags=["Entity Collection"])
+    app.add_exception_handler(
+        RequestValidationError, request_validation_exception_handler
+    )
+    app.add_exception_handler(
+        ResponseValidationError, response_validation_exception_handler
+    )
+    app.include_router(
+        api_router, prefix=CONFIG.api_base_url, tags=["Entity Collection"]
+    )
+
+    # configure logging
+    if CONFIG.log_file is None or CONFIG.log_file == "/dev/stderr":
+        log_handler = logging.StreamHandler()
+    elif CONFIG.log_file == "/dev/stdout":
+        log_handler = logging.StreamHandler(sys.stdout)
+    else:
+        try:
+            log_handler = logging.handlers.RotatingFileHandler(
+                CONFIG.log_file, maxBytes=100**6, backupCount=2
+            )
+        except Exception:  # pylint: disable=broad-except
+            # anything goes wrong, fallback to stderr
+            log_handler = logging.StreamHandler()
+    log_format = "[%(asctime)s] [%(name)s] %(levelname)s - %(message)s"
+    logging.basicConfig(
+        level=CONFIG.log_level.upper(),
+        handlers=[log_handler],
+        format=log_format,
+        datefmt="%Y-%m-%d %H:%M:%S",
+    )
 
     return app
 
-app = create_app()
 
+app = create_app()

@@ -1,5 +1,15 @@
+# ==============================================================
+#       |
+#   \  ___  /                           _________
+#  _  /   \  _    GÉANT                 |  * *  | Co-Funded by
+#     | ~ |       Trust & Identity      | *   * | the European
+#      \_/        Incubator             |__*_*__| Union
+#       =
+# ==============================================================
+
 from . import app
 from .config import CONFIG
+
 
 def main():
     """Run the app."""

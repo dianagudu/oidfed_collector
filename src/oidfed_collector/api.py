@@ -1,15 +1,23 @@
+# ==============================================================
+#       |
+#   \  ___  /                           _________
+#  _  /   \  _    GÉANT                 |  * *  | Co-Funded by
+#     | ~ |       Trust & Identity      | *   * | the European
+#      \_/        Incubator             |__*_*__| Union
+#       =
+# ==============================================================
+
 from typing import Annotated
 from fastapi import APIRouter, Query
 import logging
 
-from .collection import collect_entities
+from .collection import collect_entities_with_pagination
 from .models import EntityCollectionRequest, EntityCollectionResponse
 from .session_manager import SessionManager
 from .config import CONFIG
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
 
 
 @router.get(
@@ -20,11 +28,16 @@ logger.setLevel(logging.DEBUG)
     response_model_exclude_none=True,
     response_model_exclude_unset=True,
 )
-async def collection(request: Annotated[EntityCollectionRequest, Query()]) -> EntityCollectionResponse:
+async def collection(
+    request: Annotated[EntityCollectionRequest, Query()],
+):
     session_mgr = SessionManager(
         ttl_seconds=CONFIG.session.ttl,
-        max_connections=CONFIG.session.max_concurrent_requests
+        max_connections=CONFIG.session.max_concurrent_requests,
     )
-    entities = await collect_entities(request, session_mgr)
+    response = await collect_entities_with_pagination(request, session_mgr)
     await session_mgr.close()
-    return entities
+    if isinstance(response, EntityCollectionResponse):
+        # Convert to dict with language support
+        response = response.to_dict(lang=request.lang)
+    return response

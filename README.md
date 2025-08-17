@@ -59,7 +59,7 @@ python -m oidfed_collector
 ### Using Docker
 
 ```bash
-docker run -d -p 12345:12345 -v $(pwd)/config.json:/app/config.json ddgu/oidfed-collector:latest
+docker run -d -p 12345:12345 -v $(pwd)/config.json:/config.json ddgu/oidfed-collector:latest
 ```
 
 We also provide a `docker-compose.yaml` file for easier deployment, which mounts the configuration file from the current directory. Modify to your needs and use it as follows:
@@ -101,3 +101,10 @@ This project is licensed under the MIT License.
 
 This project includes code from fedservice (https://github.com/SUNET/fedservice), licensed under the Apache License, Version 2.0.
 Modifications were made to adapt it for this project.
+
+----
+
+This work was started in and supported by the
+[Geant Trust & Identity Incubator](https://connect.geant.org/trust-and-identity-incubator).
+
+<img src="https://wiki.geant.org/download/attachments/120500419/incubator_logo.jpg" alt="Trust & Identity Incubator logo" height="75"/>

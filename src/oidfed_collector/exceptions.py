@@ -1,3 +1,11 @@
+# ==============================================================
+#       |
+#   \  ___  /                           _________
+#  _  /   \  _    GÉANT                 |  * *  | Co-Funded by
+#     | ~ |       Trust & Identity      | *   * | the European
+#      \_/        Incubator             |__*_*__| Union
+#       =
+# ==============================================================
 
 from pydantic import ValidationError
 from fastapi import Request
@@ -16,6 +24,8 @@ from starlette.status import (
 
 import logging
 
+from oidfed_collector import message
+
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
@@ -23,28 +33,24 @@ logger.setLevel(logging.DEBUG)
 class BadRequest(JSONResponse):
     """Response for invalid request."""
 
-    def __init__(self, message: str):
-        super().__init__(status_code=HTTP_400_BAD_REQUEST, content={"detail": message})
+    def __init__(self, error_code: str, message: str | None = None):
+        super().__init__(
+            status_code=HTTP_400_BAD_REQUEST,
+            content={"error_code": error_code, "message": message},
+        )
 
 
-class MissingParameter(JSONResponse):
-    """Response for missing query parameters.
+class NotFound(JSONResponse):
+    """Response for not found resources.
 
-    Returns HTTP 400 Bad Request status code
+    Returns HTTP 404 Not Found status code
     and informative message.
     """
 
-    def __init__(self, exc: RequestValidationError):
-        errors = exc.errors()
-        no_errors = len(errors)
-        message = (
-            f"{no_errors} request validation error{'' if no_errors == 1 else 's'}: "
-            + "; ".join(
-                f"{e['msg']} ({(' -> '.join(str(l) for l in e['loc']))})"
-                for e in errors
-            )
+    def __init__(self, error_code: str):
+        super().__init__(
+            status_code=HTTP_404_NOT_FOUND, content={"error_code": error_code}
         )
-        super().__init__(status_code=HTTP_400_BAD_REQUEST, content={"detail": message})
 
 
 class InvalidResponse(JSONResponse):
@@ -58,7 +64,8 @@ class InvalidResponse(JSONResponse):
         message = "Could not validate response model."
         _ = exc
         super().__init__(
-            status_code=HTTP_500_INTERNAL_SERVER_ERROR, content={"detail": message}
+            status_code=HTTP_500_INTERNAL_SERVER_ERROR,
+            content={"error_code": "invalid_response", "message": message},
         )
 
 
@@ -70,7 +77,9 @@ class InternalException(Exception):
         super().__init__(message)
 
 
-async def request_validation_exception_handler(request: Request, exc: Exception) -> JSONResponse:
+async def request_validation_exception_handler(
+    request: Request, exc: Exception
+) -> JSONResponse:
     """Replacement callback for handling RequestValidationError exceptions.
 
     :param request: request object that caused the RequestValidationError
@@ -79,13 +88,30 @@ async def request_validation_exception_handler(request: Request, exc: Exception)
     _ = request
     logger.debug(exc)
     if isinstance(exc, RequestValidationError):
-        return MissingParameter(exc)
-    return BadRequest(exc.__str__())
+        if any(err.get("type") == "missing" for err in exc.errors()):
+            return BadRequest(
+                error_code="invalid_request",
+                message="Missing required parameter(s): %s"
+                % ", ".join(
+                    err["loc"][-1]
+                    for err in exc.errors()
+                    if err.get("type") == "missing"
+                ),
+            )
+        elif any(err.get("type") == "extra_forbidden" for err in exc.errors()):
+            return BadRequest(
+                error_code="unsupported_parameter",
+                message="Unsupported parameter(s): %s"
+                % ", ".join(
+                    err["loc"][-1]
+                    for err in exc.errors()
+                    if err.get("type") == "extra_forbidden"
+                ),
+            )
+    return BadRequest(error_code="invalid_request")
 
 
-async def validation_exception_handler(
-    request: Request, exc: Exception
-):
+async def response_validation_exception_handler(request: Request, exc: Exception):
     """Replacement callback for handling ResponseValidationError exceptions.
 
     :param request: request object that caused the ResponseValidationError
@@ -93,7 +119,10 @@ async def validation_exception_handler(
     """
     _ = request
     _ = exc
-    return InvalidResponse(exc) if isinstance(exc, (ResponseValidationError, ValidationError)) else JSONResponse(
-        status_code=HTTP_500_INTERNAL_SERVER_ERROR,
-        content={"detail": str(exc)}
+    return (
+        InvalidResponse(exc)
+        if isinstance(exc, (ResponseValidationError, ValidationError))
+        else JSONResponse(
+            status_code=HTTP_500_INTERNAL_SERVER_ERROR, content={"detail": str(exc)}
+        )
     )

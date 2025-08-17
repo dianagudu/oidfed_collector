@@ -1,6 +1,11 @@
-import os
+# ==============================================================
+#       |
+#   \  ___  /                           _________
+#  _  /   \  _    GÉANT                 |  * *  | Co-Funded by
+#     | ~ |       Trust & Identity      | *   * | the European
+#      \_/        Incubator             |__*_*__| Union
+#       =
+# ==============================================================
 
-__version__ = "UNKNOWN"
-
-with open(os.path.join(os.path.dirname(__file__), "VERSION")) as version_file:
-    __version__ = version_file.read().strip()
+# This file is overwritten by poetry-dynamic-versioning at build time
+__version__ = "0.0.0+dev"
