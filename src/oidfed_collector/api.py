@@ -11,7 +11,7 @@ from typing import Annotated
 from fastapi import APIRouter, Query
 import logging
 
-from .collection import collect_entities
+from .collection import collect_entities_with_pagination
 from .models import EntityCollectionRequest, EntityCollectionResponse
 from .session_manager import SessionManager
 from .config import CONFIG
@@ -35,6 +35,6 @@ async def collection(
         ttl_seconds=CONFIG.session.ttl,
         max_connections=CONFIG.session.max_concurrent_requests,
     )
-    entities = await collect_entities(request, session_mgr)
+    entities = await collect_entities_with_pagination(request, session_mgr)
     await session_mgr.close()
     return entities

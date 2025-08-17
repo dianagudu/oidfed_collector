@@ -11,10 +11,11 @@ import logging
 import time
 from typing import Optional, Tuple
 import asyncio
+import copy
 
-from oidfed_collector.config import CONFIG
-from oidfed_collector.message import TrustMark
 
+from .config import CONFIG
+from .message import TrustMark
 from .models import (
     Entity,
     EntityStatementPlus,
@@ -24,9 +25,9 @@ from .models import (
     get_payload,
     URL,
 )
-from .utils import get_entity_configuration, get_list_subordinate_ids
+from .utils import get_entity_configuration, get_list_subordinate_ids, hash_request
 from .session_manager import SessionManager
-from .cache import async_cache
+from .cache import async_cache, my_cache
 
 
 logger = logging.getLogger(__name__)
@@ -201,7 +202,9 @@ class FedTree:
         return entities
 
 
-@async_cache(ttl=CONFIG.cache.ttl, key_func=lambda root, *args, **kwargs: root)
+@async_cache(
+    ttl=CONFIG.cache.ttl, key_func=lambda root, *args, **kwargs: root, cache=my_cache
+)
 async def traverse(
     root: str, visited: list[str], session_mgr: SessionManager
 ) -> Tuple[Optional[FedTree], int]:
@@ -244,6 +247,7 @@ async def traverse(
         return None, int(time.time())
 
 
+@async_cache(ttl=CONFIG.cache.ttl, key_func=hash_request, cache=my_cache)
 async def collect_entities(
     request: EntityCollectionRequest, session_mgr: SessionManager
 ) -> EntityCollectionResponse:
@@ -272,3 +276,64 @@ async def collect_entities(
     return EntityCollectionResponse(
         entities=filtered_entities, last_updated=last_updated
     )
+
+
+async def collect_entities_with_pagination(
+    request: EntityCollectionRequest, session_mgr: SessionManager
+) -> EntityCollectionResponse:
+    """Collects entities with pagination support based on the provided request and session manager.
+    :param request: The request containing filters and parameters for entity collection.
+    :type request: EntityCollectionRequest
+    :param session_mgr: The session manager to use for HTTP requests.
+    :type session_mgr: SessionManager
+    :return: An EntityCollectionResponse containing the collected entities.
+    :rtype: EntityCollectionResponse
+    """
+    # if this is a subsequent request of a paginated response
+    if request.from_entity_id is not None:
+        # check if response can be found in the cache
+        cached_response = await my_cache.get(hash_request(request))
+        if not cached_response:
+            logger.error(
+                f"No cached response found for {request.from_entity_id} with limit {request.limit}"
+            )
+            # todo: return 404 application/json with error code entity_id_not_found
+            raise ValueError("No cached response found for the given parameters.")
+        else:
+            logging.debug("Using cached response for paginated request.")
+            start_index = next(
+                    (
+                        i
+                        for i, e in enumerate(cached_response.entities)
+                        if URL(e.entity_id).remove_trailing_slashes()
+                        == URL(request.from_entity_id).remove_trailing_slashes()
+                    ),
+                    None,
+                )
+            if start_index is None:
+                logger.error(
+                    f"Entity ID {request.from_entity_id} not found in cached response."
+                )
+                raise ValueError("Entity ID not found in cached response.")
+            logger.debug(
+                f"Starting from entity index {start_index} in cached response, which has {len(cached_response.entities)} entities."
+            )
+            response = copy.deepcopy(cached_response)
+            response.entities = copy.deepcopy(cached_response.entities[start_index + 1:])
+    else:  # if this is the first request
+        # collect all entities without pagination
+        response = copy.deepcopy(await collect_entities(request, session_mgr))
+
+    # if limit is set, apply it to the response
+    if request.limit is not None:
+        # return only the requested number of entities
+        response.entities = copy.deepcopy(response.entities[: request.limit])
+        if len(response.entities) < request.limit:
+            response.next_entity_id = None
+        else:
+            response.next_entity_id = URL(
+                response.entities[-1].entity_id
+            ).remove_trailing_slashes()
+    else:
+        response.next_entity_id = None
+    return response

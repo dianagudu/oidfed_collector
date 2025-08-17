@@ -9,9 +9,11 @@
 
 import logging
 from typing import Tuple
+import json
+import hashlib
 
 from .exceptions import InternalException
-from .models import URL, EntityStatementPlus
+from .models import URL, EntityStatementPlus, EntityCollectionRequest
 from .cache import async_cache, my_cache
 from .session_manager import SessionManager
 
@@ -95,3 +97,15 @@ async def get_list_subordinate_ids(
     except Exception as e:
         logger.debug(f"Could not fetch subordinates for {entity.get('sub')}: {e}")
         return []
+
+
+def hash_request(request: EntityCollectionRequest, *args, **kwargs) -> str:
+    list_str = json.dumps([
+        URL(request.trust_anchor).remove_trailing_slashes(),
+        request.entity_type,
+        request.trust_mark_type,
+        request.query,
+        request.entity_claims,
+        request.ui_claims,
+    ])
+    return hashlib.sha256(list_str.encode()).hexdigest()
