@@ -12,7 +12,7 @@ from fastapi import APIRouter, Query
 import logging
 
 from .collection import collect_entities_with_pagination
-from .models import EntityCollectionRequest
+from .models import EntityCollectionRequest, EntityCollectionResponse
 from .session_manager import SessionManager
 from .config import CONFIG
 
@@ -37,4 +37,7 @@ async def collection(
     )
     response = await collect_entities_with_pagination(request, session_mgr)
     await session_mgr.close()
+    if isinstance(response, EntityCollectionResponse):
+        # Convert to dict with language support
+        response = response.to_dict(lang=request.lang)
     return response

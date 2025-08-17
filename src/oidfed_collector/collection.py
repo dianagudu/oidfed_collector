@@ -136,9 +136,6 @@ class EntityFilter:
         ):
             md_type = md.get(etype)
             if md_type:
-                if entity_dict["ui_infos"] is None:
-                    entity_dict["ui_infos"] = {}
-
                 display_name = md_type.get("display_name", None)
                 if not display_name:
                     if etype == "openid_relying_party" or etype == "oauth_client":
@@ -154,14 +151,30 @@ class EntityFilter:
                 ui_info_dict["policy_uri"] = md_type.get("policy_uri", None)
                 ui_info_dict["information_uri"] = md_type.get("information_uri", None)
 
-                # filter UI infos by ui_claims, if provided
-                entity_dict["ui_infos"][etype] = UiInfo(
-                    **{
-                        k: v
-                        for k, v in ui_info_dict.items()
-                        if not self.ui_claims or k in self.ui_claims
-                    }
-                )
+                # check for language tags (start with claim_name#) in metadata for all claims in UI info and add them to the UI info
+                for k, v in md_type.items():
+                    if (
+                        k.startswith("display_name#")
+                        or k.startswith("description#")
+                        or k.startswith("keywords#")
+                        or k.startswith("logo_uri#")
+                        or k.startswith("policy_uri#")
+                        or k.startswith("information_uri#")
+                    ):
+                        ui_info_dict[k] = v
+
+                # only set if there is at least one entry in the UI info dict that is not None
+                if any(v is not None for v in ui_info_dict.values()):
+                    if entity_dict["ui_infos"] is None:
+                        entity_dict["ui_infos"] = {}
+                    # filter UI infos by ui_claims, if provided
+                    entity_dict["ui_infos"][etype] = UiInfo(
+                        **{
+                            k: v
+                            for k, v in ui_info_dict.items()
+                            if not self.ui_claims or k in self.ui_claims
+                        }
+                    )
 
         # filter by entity_claims, if provided
         return Entity(

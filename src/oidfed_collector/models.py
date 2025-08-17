@@ -62,6 +62,7 @@ class EntityCollectionRequest(BaseModel):
     # query: str | None = None
     entity_claims: list[EntityClaims] | None = None
     ui_claims: list[UiClaims] | None = None
+    lang: str | None = None
 
 
 class UiInfo(BaseModel):
@@ -73,7 +74,29 @@ class UiInfo(BaseModel):
     logo_uri: HttpUrl | str | None = None
     policy_uri: HttpUrl | str | None = None
     information_uri: HttpUrl | str | None = None
-
+    # this is to allow language tags in the UI info for all claims
+    class Config:
+        extra = "allow"
+    
+    # function that can filter based on language, where additional fields are named field#lang
+    # e.g. display_name#en, display_name#fr, etc.
+    # by default, when lang is not specified, all language tags are returned
+    # when lang is specified, the fields without the language tag is returned,
+    # as well as the fields with the requested language tag
+    # all other language tagged fields are filtered out
+    def to_dict(self, lang:str | None = None):
+        data = self.model_dump(exclude_none=True, exclude_unset=True)
+        if lang:
+            # filter fields with language tag
+            for key in list(data.keys()):
+                if key.endswith(f"#{lang}"):
+                    pass  # keep the language tagged field
+                elif "#" in key:
+                    # remove all other language tagged fields
+                    data.pop(key, None)
+        return data
+                    
+    
 
 class Entity(BaseModel):
     """Entity"""
@@ -83,6 +106,15 @@ class Entity(BaseModel):
     ui_infos: dict[EntityType, UiInfo] | None = None
     trust_marks: list[dict[Literal["trust_mark_type", "trust_mark"], str]] | None = None
 
+    def to_dict(self, lang: str | None = None):
+        # apply to_dict on ui_infos if they are UiInfo instances
+        data = self.model_dump(exclude_none=True, exclude_unset=True)
+        if self.ui_infos:
+            for etype, ui_info in self.ui_infos.items():
+                if isinstance(ui_info, UiInfo):
+                    data["ui_infos"][etype] = ui_info.to_dict(lang=lang)
+        return data
+
 
 class EntityCollectionResponse(BaseModel):
     """Response for entity collection"""
@@ -90,6 +122,13 @@ class EntityCollectionResponse(BaseModel):
     entities: list[Entity]
     next_entity_id: str | None = None
     last_updated: int
+
+    def to_dict(self, lang: str | None = None):
+        # apply to_dict on each entity if they are Entity instances
+        data = self.model_dump(exclude_none=True, exclude_unset=True)
+        if self.entities:
+            data["entities"] = [entity.to_dict(lang=lang) for entity in self.entities]
+        return data
 
 
 class URL:
