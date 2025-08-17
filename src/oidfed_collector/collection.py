@@ -8,10 +8,13 @@
 # ==============================================================
 
 import logging
+import re
 import time
 from typing import Optional, Tuple
 import asyncio
 import copy
+
+from oidfed_collector.exceptions import NotFound
 
 
 from .config import CONFIG
@@ -280,7 +283,7 @@ async def collect_entities(
 
 async def collect_entities_with_pagination(
     request: EntityCollectionRequest, session_mgr: SessionManager
-) -> EntityCollectionResponse:
+) -> EntityCollectionResponse | NotFound:
     """Collects entities with pagination support based on the provided request and session manager.
     :param request: The request containing filters and parameters for entity collection.
     :type request: EntityCollectionRequest
@@ -298,28 +301,30 @@ async def collect_entities_with_pagination(
                 f"No cached response found for {request.from_entity_id} with limit {request.limit}"
             )
             # todo: return 404 application/json with error code entity_id_not_found
-            raise ValueError("No cached response found for the given parameters.")
+            return NotFound(error_code="entity_id_not_found")
         else:
             logging.debug("Using cached response for paginated request.")
             start_index = next(
-                    (
-                        i
-                        for i, e in enumerate(cached_response.entities)
-                        if URL(e.entity_id).remove_trailing_slashes()
-                        == URL(request.from_entity_id).remove_trailing_slashes()
-                    ),
-                    None,
-                )
+                (
+                    i
+                    for i, e in enumerate(cached_response.entities)
+                    if URL(e.entity_id).remove_trailing_slashes()
+                    == URL(request.from_entity_id).remove_trailing_slashes()
+                ),
+                None,
+            )
             if start_index is None:
                 logger.error(
                     f"Entity ID {request.from_entity_id} not found in cached response."
                 )
-                raise ValueError("Entity ID not found in cached response.")
+                return NotFound(error_code="entity_id_not_found")
             logger.debug(
                 f"Starting from entity index {start_index} in cached response, which has {len(cached_response.entities)} entities."
             )
             response = copy.deepcopy(cached_response)
-            response.entities = copy.deepcopy(cached_response.entities[start_index + 1:])
+            response.entities = copy.deepcopy(
+                cached_response.entities[start_index + 1 :]
+            )
     else:  # if this is the first request
         # collect all entities without pagination
         response = copy.deepcopy(await collect_entities(request, session_mgr))

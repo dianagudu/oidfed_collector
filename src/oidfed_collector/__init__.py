@@ -9,6 +9,33 @@
 
 __name__ = "oidfed_collector"
 
+import subprocess
+import sys
+
+__version__ = "0.0.0+dev"  # fallback
+
+# Attempt to read version from git in dev mode
+try:
+    if not hasattr(sys, "frozen"):  # skip for frozen builds
+        git_version = subprocess.check_output(
+            ["git", "describe", "--tags", "--always"],
+            stderr=subprocess.DEVNULL,
+        ).decode().strip()
+        if git_version:
+            __version__ = git_version
+except Exception:
+    pass
+
+# poetry-dynamic-versioning will replace this during build
+try:
+    from ._version import __version__ as _version_build
+    if _version_build and _version_build != "0.0.0":
+        __version__ = _version_build
+except ImportError:
+    pass
+
+__all__ = ["__version__"]
+
 import logging
 import logging.handlers
 import sys
@@ -16,11 +43,10 @@ from fastapi import FastAPI
 from fastapi.exceptions import RequestValidationError, ResponseValidationError
 from contextlib import asynccontextmanager
 
-from ._version import __version__
 from .config import CONFIG
 from .exceptions import (
     request_validation_exception_handler,
-    validation_exception_handler,
+    response_validation_exception_handler,
 )
 from .api import router as api_router
 from .cache import my_cache
@@ -46,7 +72,9 @@ def create_app():
     app.add_exception_handler(
         RequestValidationError, request_validation_exception_handler
     )
-    app.add_exception_handler(ResponseValidationError, validation_exception_handler)
+    app.add_exception_handler(
+        ResponseValidationError, response_validation_exception_handler
+    )
     app.include_router(
         api_router, prefix=CONFIG.api_base_url, tags=["Entity Collection"]
     )

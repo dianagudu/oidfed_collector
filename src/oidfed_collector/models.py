@@ -8,7 +8,7 @@
 # ==============================================================
 
 from typing import Literal
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 import urllib.parse
 import time
 from pydantic import HttpUrl
@@ -52,12 +52,14 @@ UiClaims = Literal[
 class EntityCollectionRequest(BaseModel):
     """Request for entity collection"""
 
+    model_config = ConfigDict(extra="forbid")
+
     from_entity_id: HttpUrl | None = None
     limit: int | None = None
     entity_type: list[EntityType] | None = None
     trust_mark_type: list[str] | None = None
     trust_anchor: HttpUrl
-    query: str | None = None
+    # query: str | None = None
     entity_claims: list[EntityClaims] | None = None
     ui_claims: list[UiClaims] | None = None
 

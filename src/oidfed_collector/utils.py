@@ -100,12 +100,14 @@ async def get_list_subordinate_ids(
 
 
 def hash_request(request: EntityCollectionRequest, *args, **kwargs) -> str:
-    list_str = json.dumps([
-        URL(request.trust_anchor).remove_trailing_slashes(),
-        request.entity_type,
-        request.trust_mark_type,
-        request.query,
-        request.entity_claims,
-        request.ui_claims,
-    ])
+    list_str = json.dumps(
+        [
+            URL(request.trust_anchor).remove_trailing_slashes(),
+            request.entity_type,
+            request.trust_mark_type,
+            # request.query,
+            request.entity_claims,
+            request.ui_claims,
+        ]
+    )
     return hashlib.sha256(list_str.encode()).hexdigest()

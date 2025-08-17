@@ -1,6 +1,5 @@
 [project]
 name = "oidfed-collector"
-version = "0.2.0"
 description = "Entity collection endpoint for OpenID Federation"
 authors = [
     {name = "Diana Gudu",email = "diana.gudu@kit.edu"}
@@ -17,6 +16,10 @@ dependencies = [
 
 [tool.poetry]
 packages = [{include = "oidfed_collector", from = "src"}]
+version = "0.0.0"
+
+[tool.poetry-dynamic-versioning]
+enable = true
 
 [tool.poetry.scripts]
 oidfed-collector = "oidfed_collector.__main__:main"
@@ -32,5 +35,5 @@ venv = ".venv"
 pythonVersion = "3.10"
 
 [build-system]
-requires = ["poetry-core>=2.0.0,<3.0.0"]
-build-backend = "poetry.core.masonry.api"
+requires = ["poetry-core>=1.0.0", "poetry-dynamic-versioning>=1.0.0,<2.0.0"]
+build-backend = "poetry_dynamic_versioning.backend"

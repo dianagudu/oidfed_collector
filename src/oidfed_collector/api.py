@@ -12,7 +12,7 @@ from fastapi import APIRouter, Query
 import logging
 
 from .collection import collect_entities_with_pagination
-from .models import EntityCollectionRequest, EntityCollectionResponse
+from .models import EntityCollectionRequest
 from .session_manager import SessionManager
 from .config import CONFIG
 
@@ -30,11 +30,11 @@ logger = logging.getLogger(__name__)
 )
 async def collection(
     request: Annotated[EntityCollectionRequest, Query()],
-) -> EntityCollectionResponse:
+):
     session_mgr = SessionManager(
         ttl_seconds=CONFIG.session.ttl,
         max_connections=CONFIG.session.max_concurrent_requests,
     )
-    entities = await collect_entities_with_pagination(request, session_mgr)
+    response = await collect_entities_with_pagination(request, session_mgr)
     await session_mgr.close()
-    return entities
+    return response
