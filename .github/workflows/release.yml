@@ -50,6 +50,9 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -72,3 +75,4 @@ jobs:
           tags: |
             ${{ secrets.DOCKER_USERNAME }}/oidfed-collector:${{ env.TAG }}
             ${{ secrets.DOCKER_USERNAME }}/oidfed-collector:latest
+          target: production

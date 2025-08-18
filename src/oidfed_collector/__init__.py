@@ -16,7 +16,7 @@ from ._version import __version__ as _version_placeholder
 __version__ = _version_placeholder
 
 # Runtime: try to get git tag if still placeholder
-if _version_placeholder.endswith("+dev") or _version_placeholder == "0.0.0":
+if _version_placeholder == "0.0.0":
     try:
         # Prefer the tag from GitHub Actions if available
         tag = os.getenv("GITHUB_REF_NAME")
