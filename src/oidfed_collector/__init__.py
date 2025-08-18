@@ -10,6 +10,7 @@
 __name__ = "oidfed_collector"
 
 import subprocess
+import os
 from ._version import __version__ as _version_placeholder
 
 __version__ = _version_placeholder
@@ -17,14 +18,20 @@ __version__ = _version_placeholder
 # Runtime: try to get git tag if still placeholder
 if _version_placeholder.endswith("+dev") or _version_placeholder == "0.0.0":
     try:
-        git_version = (
-            subprocess.check_output(
-                ["git", "describe", "--tags", "--always"],
-                stderr=subprocess.DEVNULL,
+        # Prefer the tag from GitHub Actions if available
+        tag = os.getenv("GITHUB_REF_NAME")
+        if tag:
+            git_version = tag.lstrip("v")
+        else:
+            git_version = (
+                subprocess.check_output(
+                    ["git", "describe", "--tags", "--always"],
+                    stderr=subprocess.DEVNULL,
+                )
+                .decode()
+                .strip()
+                .lstrip("v")
             )
-            .decode()
-            .strip()
-        )
         if git_version:
             __version__ = git_version
     except Exception:
